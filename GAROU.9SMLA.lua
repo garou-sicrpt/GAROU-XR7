@@ -1,5 +1,5 @@
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayers = game:GetService("Players")
+local LocalPlayer = LocalPlayers.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -64,7 +64,7 @@ Title.Size = UDim2.new(1, 0, 1, 0)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBlack
 Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Text = "إحتساب النقاط"
+Title.Text = "GAROU XR7"
 Title.TextScaled = true
 
 local SubTitle = Instance.new("TextLabel", Frame)
@@ -73,7 +73,7 @@ SubTitle.Position = UDim2.new(0, 0, 0, 54)
 SubTitle.BackgroundTransparency = 1
 SubTitle.Font = Enum.Font.GothamBold
 SubTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
-SubTitle.Text = "صنع بواسطة كارو"
+SubTitle.Text = "GAROU XR7"
 SubTitle.TextSize = 16
 
 local TimerLabel = Instance.new("TextLabel", Frame)
@@ -119,7 +119,6 @@ local UIListLayout = Instance.new("UIListLayout", ScrollingFrame)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 8)
 
-local scriptActive = false
 local sessionTime = 0
 local trackedPlayers = {} 
 local backgroundHistory = {}
@@ -228,7 +227,7 @@ AddButton.MouseButton1Click:Connect(function()
 	local text = TextBox.Text:lower()
 	if text == "" then return end
 	
-	for _, pl in pairs(Players:GetPlayers()) do
+	for _, pl in pairs(LocalPlayers:GetPlayers()) do
 		if pl.Name:lower():sub(1, #text) == text or pl.DisplayName:lower():sub(1, #text) == text or pl.Name:lower():find(text) or pl.DisplayName:lower():find(text) then
 			local exists = false
 			for _, item in ipairs(trackedPlayers) do
@@ -297,7 +296,7 @@ local function setupPlayerTracking(pl)
 	end)
 end
 
-Players.PlayerAdded:Connect(function(pl)
+LocalPlayers.PlayerAdded:Connect(function(pl)
 	setupPlayerTracking(pl)
 	for _, item in ipairs(trackedPlayers) do
 		if item.player.UserId == pl.UserId then
@@ -308,30 +307,28 @@ Players.PlayerAdded:Connect(function(pl)
 	end
 end)
 
-for _, pl in pairs(Players:GetPlayers()) do
+for _, pl in pairs(LocalPlayers:GetPlayers()) do
 	setupPlayerTracking(pl)
 end
 
 RunService.Heartbeat:Connect(function(dt)
 	Button.Rotation = (Button.Rotation + dt * 25) % 360
 
-	if scriptActive then
-		sessionTime += dt
-		TimerLabel.Text = "مدة بقائك: " .. formatTime(sessionTime)
-		
-		if Frame.Visible and #trackedPlayers > 0 then
-			for index, data in ipairs(trackedPlayers) do
-				local itemFrame = ScrollingFrame:FindFirstChild("PlayerItem_" .. index)
-				if itemFrame then
-					local statsLbl = itemFrame:FindFirstChild("StatsLabel")
-					if statsLbl then
-						local stats = data.stats
-						local currentTimer = stats.AccumulatedTime
-						if stats.IsInGame then
-							currentTimer = currentTimer + (tick() - stats.LastJoinTick)
-						end
-						statsLbl.Text = "دخول: " .. stats.JoinCount .. " | خروج: " .. stats.LeaveCount .. " | الوقت: " .. formatTime(currentTimer)
+	sessionTime += dt
+	TimerLabel.Text = "مدة بقائك: " .. formatTime(sessionTime)
+	
+	if Frame.Visible and #trackedPlayers > 0 then
+		for index, data in ipairs(trackedPlayers) do
+			local itemFrame = ScrollingFrame:FindFirstChild("PlayerItem_" .. index)
+			if itemFrame then
+				local statsLbl = itemFrame:FindFirstChild("StatsLabel")
+				if statsLbl then
+					local stats = data.stats
+					local currentTimer = stats.AccumulatedTime
+					if stats.IsInGame then
+						currentTimer = currentTimer + (tick() - stats.LastJoinTick)
 					end
+					statsLbl.Text = "دخول: " .. stats.JoinCount .. " | خروج: " .. stats.LeaveCount .. " | الوقت: " .. formatTime(currentTimer)
 				end
 			end
 		end
@@ -340,7 +337,6 @@ end)
 
 local function toggleFrame(frame)
 	if frame.Visible == false then
-		scriptActive = true
 		frame.Visible = true
 		frame.Size = UDim2.new(0, 0, 0, 0)
 		frame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -350,7 +346,6 @@ local function toggleFrame(frame)
 		})
 		tween:Play()
 	else
-		scriptActive = false
 		local tween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			Size = UDim2.new(0, 0, 0, 0),
 			Position = UDim2.new(0.5, 0, 0.5, 0)
