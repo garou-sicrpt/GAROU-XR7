@@ -16,7 +16,6 @@ pcall(function()
     end
 end)
 
--- دالة الإشعارات (تطلع من جهة اليمين)
 local function SendNotification(text)
     local existing = GuiParent:FindFirstChild("DeltaNotificationUI")
     if existing then
@@ -30,7 +29,6 @@ local function SendNotification(text)
 
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0, 260, 0, 45)
-    -- البدء من خارج الشاشة من جهة اليمين
     Frame.Position = UDim2.new(1, 60, 1, -70)
     Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     Frame.BorderSizePixel = 0
@@ -61,12 +59,10 @@ local function SendNotification(text)
     TextLabel.Text = text
     TextLabel.Parent = Frame
 
-    -- الحركة للداخل من جهة اليمين
     Frame:TweenPosition(UDim2.new(1, -275, 1, -70), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
 
     task.spawn(function()
         task.wait(2.5)
-        -- الخروج نحو اليمين
         Frame:TweenPosition(UDim2.new(1, 60, 1, -70), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.3, true)
         task.wait(0.3)
         ScreenGui:Destroy()
@@ -129,7 +125,6 @@ IntroSound.Volume = 1
 IntroSound.Parent = IntroGui
 
 local maxSize = 320
-
 IntroSound:Play()
 
 for i = 1, 40 do
@@ -563,7 +558,7 @@ function MakeWindow(Configs)
     if TabTitle then
       Create("TextLabel", Container, {
         BackgroundTransparency = 1,
-        Text = "#" .. string.gsub(TabName, " ", "-"),
+        Text = string.gsub(TabName, " ", "-"),
         TextSize = 25,
         Font = Configs_HUB.Text_Font,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1036,6 +1031,53 @@ end)
 
 LocalPlayer.CharacterAdded:Connect(function()
     UnfreezePlayer()
+end)
+
+local KillFixBoxFrame = CreateInfoBox(TabUser, UDim2.new(1, 0, 0, 45))
+local KillFixButton = Create("TextButton", KillFixBoxFrame, {
+    Size = UDim2.new(1, -20, 0, 32),
+    Position = UDim2.new(0, 10, 0, 6.5),
+    BackgroundColor3 = Color3.fromRGB(200, 40, 40),
+    Text = "💀 امر قتل وفك التجميد (عند التعليق)",
+    Font = Configs_HUB.Text_Font,
+    TextSize = 13,
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    ZIndex = 4,
+    Active = true
+})
+Corner(KillFixButton, {CornerRadius = UDim.new(0, 6)})
+
+BindClick(KillFixButton, function()
+    ClickSound:Play()
+    
+    -- إيقاف التجميد فوراً لكي لا يبقى مفعلاً تلقائياً وتضطر لإعادة تشغيله يدوياً
+    UnfreezePlayer()
+
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = false
+                    part.CanCollide = true
+                end
+            end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Health = 0
+                humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+            end
+            char:BreakJoints()
+            task.delay(0.5, function()
+                if LocalPlayer.Character == char then
+                    LocalPlayer.Character = nil
+                    task.wait(0.1)
+                    LocalPlayer.CharacterAdded:Wait()
+                end
+            end)
+        end
+    end)
+    SendNotification("تم تنفيذ أمر القتل وفك التجميد بنجاح 💀")
 end)
 
 local UnifiedBox = CreateInfoBox(TabSomla, UDim2.new(1, 0, 0, 210))
