@@ -46,11 +46,12 @@ end)
 
 local Frame = Instance.new("Frame", Gui)
 Frame.Size = UDim2.new(0, 540, 0, 390)
-Frame.Position = UDim2.new(0.5, -270, 0.5, -195)
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(35, 12, 12)
 Frame.Visible = false
 Frame.Active = true
-Frame.Draggable = true
+Frame.Draggable = false
 Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
 
 local TitleBox = Instance.new("Frame", Frame)
@@ -64,7 +65,7 @@ Title.Size = UDim2.new(1, 0, 1, 0)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBlack
 Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Text = "GAROU XR7"
+Title.Text = "احتساب نقاط"
 Title.TextScaled = true
 
 local SubTitle = Instance.new("TextLabel", Frame)
@@ -73,21 +74,22 @@ SubTitle.Position = UDim2.new(0, 0, 0, 54)
 SubTitle.BackgroundTransparency = 1
 SubTitle.Font = Enum.Font.GothamBold
 SubTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
-SubTitle.Text = "GAROU XR7"
+SubTitle.Text = "صنع قبل كارو"
 SubTitle.TextSize = 16
 
 local TimerLabel = Instance.new("TextLabel", Frame)
-TimerLabel.Size = UDim2.new(1, 0, 0, 22)
-TimerLabel.Position = UDim2.new(0, 0, 0, 80)
+TimerLabel.Size = UDim2.new(0.92, 0, 0, 32)
+TimerLabel.Position = UDim2.new(0.04, 0, 0, 76)
 TimerLabel.BackgroundTransparency = 1
 TimerLabel.Font = Enum.Font.GothamBold
 TimerLabel.TextColor3 = Color3.new(1, 1, 1)
 TimerLabel.Text = "مدة بقائك: 00:00:00"
-TimerLabel.TextScaled = true
+TimerLabel.TextSize = 28
+TimerLabel.TextXAlignment = Enum.TextXAlignment.Center
 
 local TextBox = Instance.new("TextBox", Frame)
 TextBox.Size = UDim2.new(0.72, 0, 0, 36)
-TextBox.Position = UDim2.new(0.04, 0, 0, 108)
+TextBox.Position = UDim2.new(0.04, 0, 0, 114)
 TextBox.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
 TextBox.PlaceholderText = "أكتب إسم لاعب"
 TextBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 150)
@@ -100,7 +102,7 @@ Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
 
 local AddButton = Instance.new("TextButton", Frame)
 AddButton.Size = UDim2.new(0.18, 0, 0, 36)
-AddButton.Position = UDim2.new(0.78, 0, 0, 108)
+AddButton.Position = UDim2.new(0.78, 0, 0, 114)
 AddButton.BackgroundColor3 = Color3.fromRGB(140, 30, 30)
 AddButton.Text = "بدء"
 AddButton.TextColor3 = Color3.new(1, 1, 1)
@@ -109,8 +111,8 @@ AddButton.TextScaled = true
 Instance.new("UICorner", AddButton).CornerRadius = UDim.new(0, 8)
 
 local ScrollingFrame = Instance.new("ScrollingFrame", Frame)
-ScrollingFrame.Size = UDim2.new(0.92, 0, 0, 200)
-ScrollingFrame.Position = UDim2.new(0.04, 0, 0, 155)
+ScrollingFrame.Size = UDim2.new(0.92, 0, 0, 195)
+ScrollingFrame.Position = UDim2.new(0.04, 0, 0, 158)
 ScrollingFrame.BackgroundTransparency = 1
 ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingFrame.ScrollBarThickness = 6
@@ -130,7 +132,7 @@ local function formatTime(t)
 	return string.format("%02d:%02d:%02d", h, m, s)
 end
 
-local function rebuildList()
+local function rebuildList(shouldScrollToBottom)
 	for _, child in pairs(ScrollingFrame:GetChildren()) do
 		if child:IsA("Frame") then
 			child:Destroy()
@@ -215,12 +217,18 @@ local function rebuildList()
 		
 		DeleteBtn.MouseButton1Click:Connect(function()
 			table.remove(trackedPlayers, index)
-			rebuildList()
+			rebuildList(false)
 		end)
 	end
 	
-	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #trackedPlayers * 68)
-	ScrollingFrame.CanvasPosition = Vector2.new(0, ScrollingFrame.CanvasSize.Y.Offset)
+	local totalHeight = #trackedPlayers * 68
+	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+	
+	if shouldScrollToBottom then
+		task.defer(function()
+			ScrollingFrame.CanvasPosition = Vector2.new(0, math.max(0, totalHeight - ScrollingFrame.AbsoluteWindowSize.Y))
+		end)
+	end
 end
 
 AddButton.MouseButton1Click:Connect(function()
@@ -255,7 +263,7 @@ AddButton.MouseButton1Click:Connect(function()
 				end
 				
 				table.insert(trackedPlayers, {player = pl, stats = stats})
-				rebuildList()
+				rebuildList(true)
 				break
 			end
 		end
@@ -276,12 +284,6 @@ local function setupPlayerTracking(pl)
 			HasLeftOnce = false
 		}
 		backgroundHistory[userId] = stats
-	else
-		stats.IsInGame = true
-		stats.LastJoinTick = tick()
-		if stats.HasLeftOnce then
-			stats.JoinCount = stats.JoinCount + 1
-		end
 	end
 	
 	pl.AncestryChanged:Connect(function(_, parent)
@@ -292,6 +294,7 @@ local function setupPlayerTracking(pl)
 				stats.AccumulatedTime = stats.AccumulatedTime + (tick() - stats.LastJoinTick)
 				stats.IsInGame = false
 			end
+			rebuildList(false)
 		end
 	end)
 end
@@ -301,7 +304,13 @@ LocalPlayers.PlayerAdded:Connect(function(pl)
 	for _, item in ipairs(trackedPlayers) do
 		if item.player.UserId == pl.UserId then
 			item.player = pl
-			rebuildList()
+			local stats = item.stats
+			stats.IsInGame = true
+			stats.LastJoinTick = tick()
+			if stats.HasLeftOnce then
+				stats.JoinCount = stats.JoinCount + 1
+			end
+			rebuildList(false)
 			break
 		end
 	end
@@ -335,30 +344,27 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 end)
 
-local function toggleFrame(frame)
-	if frame.Visible == false then
-		frame.Visible = true
-		frame.Size = UDim2.new(0, 0, 0, 0)
-		frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-		local tween = TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0, 540, 0, 390),
-			Position = UDim2.new(0.5, -270, 0.5, -195)
-		})
-		tween:Play()
-	else
-		local tween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Size = UDim2.new(0, 0, 0, 0),
-			Position = UDim2.new(0.5, 0, 0.5, 0)
-		})
-		tween:Play()
-		tween.Completed:Connect(function()
-			frame.Visible = false
-			frame.Size = UDim2.new(0, 540, 0, 390)
-			frame.Position = UDim2.new(0.5, -270, 0.5, -195)
-		end)
-	end
-end
-
+local isAnimating = false
 Button.MouseButton1Click:Connect(function()
-	toggleFrame(Frame)
+	if isAnimating then return end
+	isAnimating = true
+	
+	if not Frame.Visible then
+		Frame.Size = UDim2.new(0, 0, 0, 0)
+		Frame.Visible = true
+		local tween = TweenService:Create(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, 540, 0, 390)
+		})
+		tween:Play()
+		tween.Completed:Wait()
+	else
+		local tween = TweenService:Create(Frame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Size = UDim2.new(0, 0, 0, 0)
+		})
+		tween:Play()
+		tween.Completed:Wait()
+		Frame.Visible = false
+		Frame.Size = UDim2.new(0, 540, 0, 390)
+	end
+	isAnimating = false
 end)
